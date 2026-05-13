@@ -1,3 +1,35 @@
+<!-- ════════════════ AIX SOVEREIGN STACK · UNIFIED BRANDING ════════════════ -->
+
+<div align="center">
+  <img src="./public/assets/aix-stack-header-v2.svg" alt="The AIX Sovereign Stack. Echo369. L0 Root Authority. L1 Protocol. L2 Runtime. L3 Marketplace. L4-L6 Satellites" width="100%"/>
+</div>
+
+<div align="center">
+
+[![AIX Stack](https://img.shields.io/badge/AIX%20STACK-Echo369-FFD700?style=for-the-badge&labelColor=050505)](https://github.com/Moeabdelaziz007/aix-format/blob/main/AXIOM.md)
+[![Spec](https://img.shields.io/badge/SPEC-AIX%2F1.0-FFD700?style=for-the-badge&labelColor=050505)](https://github.com/Moeabdelaziz007/aix-format/blob/main/AXIOM.md)
+[![Layer](https://img.shields.io/badge/LAYER-L0%20%C2%B7%20ROOT%20AUTHORITY-FFD700?style=for-the-badge&labelColor=050505)](https://github.com/Moeabdelaziz007/axiomid-project)
+[![Version](https://img.shields.io/badge/version-v1.0.0-FFD700?style=for-the-badge&labelColor=050505)](./package.json)
+[![License](https://img.shields.io/badge/LICENSE-Proprietary-FFD700?style=for-the-badge&labelColor=050505)](./LICENSE)
+
+</div>
+
+<div align="center">
+
+**Root Authority** &nbsp;.&nbsp; **👑 L0 . `axiomid-project` . YOU ARE HERE** &nbsp;.&nbsp; Sovereign Core: [**L1 `aix-format`**](https://github.com/Moeabdelaziz007/aix-format) &nbsp;.&nbsp; [**L2 `iqra`**](https://github.com/Moeabdelaziz007/iqra) &nbsp;.&nbsp; [**L3 `aix-agent-skills`**](https://github.com/Moeabdelaziz007/aix-agent-skills)
+
+</div>
+
+<div align="center">
+
+<sub>Satellites: [**L4 `AlphaAxiom`**](https://github.com/Moeabdelaziz007/AlphaAxiom) &nbsp;.&nbsp; [**L5 `PiWorker-OS`**](https://github.com/Moeabdelaziz007/PiWorker-OS) &nbsp;.&nbsp; [**L6 `GemClaw`**](https://github.com/Moeabdelaziz007/GemClaw) &nbsp;.&nbsp; identity flows: L0 -&gt; all (every agent carries did:axiom:axiomid.app:*)</sub>
+
+</div>
+
+<br/>
+
+<!-- ════════════════ /AIX SOVEREIGN STACK ════════════════ -->
+
 <p align="center">
   <img src="./public/axiomid-banner.png" alt="AxiomID Banner" width="100%" />
 </p>
@@ -226,3 +258,25 @@ npm run dev
 ```
 
 </div>
+
+<!-- ════════════════ AIX SOVEREIGN STACK . FOOTER ════════════════ -->
+
+---
+
+<div align="center">
+
+**👑 L0 . ROOT AUTHORITY . `axiomid-project` . YOU ARE HERE** &nbsp;.&nbsp; Sovereign Core: [**L1 `aix-format`**](https://github.com/Moeabdelaziz007/aix-format) &nbsp;.&nbsp; [**L2 `iqra`**](https://github.com/Moeabdelaziz007/iqra) &nbsp;.&nbsp; [**L3 `aix-agent-skills`**](https://github.com/Moeabdelaziz007/aix-agent-skills)
+
+</div>
+
+<div align="center">
+
+<sub>Satellites: [**L4 `AlphaAxiom`**](https://github.com/Moeabdelaziz007/AlphaAxiom) &nbsp;.&nbsp; [**L5 `PiWorker-OS`**](https://github.com/Moeabdelaziz007/PiWorker-OS) &nbsp;.&nbsp; [**L6 `GemClaw`**](https://github.com/Moeabdelaziz007/GemClaw)</sub>
+
+</div>
+
+<div align="center">
+  <img src="./public/assets/aix-footer-quote-v2.svg" alt="AIX Stack. Echo369. King is not Born, he is Made." width="100%"/>
+</div>
+
+<!-- ════════════════ /AIX SOVEREIGN STACK . FOOTER ════════════════ -->
