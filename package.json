@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "description": "AxiomID - The Human Authorization Protocol. Decentralized identity verification for human-AI collaboration.",
+  "aix": {
+    "stackVersion": "0.369.0",
+    "stackCodename": "Echo369",
+    "spec": "AIX/1.0",
+    "layer": "L0",
+    "layerName": "root-authority",
+    "authority": "axiomid.app"
+  },
   "author": "Mohamed Abdelaziz <https://github.com/Moeabdelaziz007>",
   "homepage": "https://axiomid.app",
   "repository": {
