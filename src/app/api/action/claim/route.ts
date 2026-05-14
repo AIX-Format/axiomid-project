@@ -20,7 +20,6 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { walletAddress },
-      include: { actions: true },
     });
 
     if (!user) {
@@ -28,23 +27,37 @@ export async function POST(request: Request) {
     }
 
     // Check if action already performed (unless it's repeatable like daily)
-    // explicitly typing 'a' as any to avoid build errors if Action type is not generated
-    if (actionType !== 'daily_pow' && user.actions.some((a: any) => a.type === actionType)) {
-      return NextResponse.json({ error: 'Action already claimed' }, { status: 400 });
+    if (actionType !== 'daily_pow') {
+      const existingAction = await prisma.action.findFirst({
+        where: {
+          userId: user.id,
+          type: actionType,
+        },
+      });
+
+      if (existingAction) {
+        return NextResponse.json({ error: 'Action already claimed' }, { status: 400 });
+      }
     }
 
-    // Check daily pow cooldown (simulated for MVP)
+    // Check daily pow cooldown
     if (actionType === 'daily_pow') {
-        const lastDaily = user.actions
-            .filter((a: any) => a.type === 'daily_pow')
-            .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+      const lastDaily = await prisma.action.findFirst({
+        where: {
+          userId: user.id,
+          type: 'daily_pow',
+        },
+        orderBy: {
+          timestamp: 'desc',
+        },
+      });
 
-        if (lastDaily) {
-            const diff = Date.now() - new Date(lastDaily.timestamp).getTime();
-            if (diff < 24 * 60 * 60 * 1000) {
-                 return NextResponse.json({ error: 'Daily claim cooldown' }, { status: 400 });
-            }
+      if (lastDaily) {
+        const diff = Date.now() - new Date(lastDaily.timestamp).getTime();
+        if (diff < 24 * 60 * 60 * 1000) {
+          return NextResponse.json({ error: 'Daily claim cooldown' }, { status: 400 });
         }
+      }
     }
 
     // Create Action
