@@ -42,7 +42,9 @@ describe('GET /api/user/status', () => {
   });
 
   it('should return 404 if user not found', async () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue(null);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       url: `http://localhost/api/user/status?walletAddress=${mockWalletAddress}`,
@@ -62,7 +64,9 @@ describe('GET /api/user/status', () => {
       tier: 'Spark',
       actions: [],
     };
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue(mockUser);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       url: `http://localhost/api/user/status?walletAddress=${mockWalletAddress}`,

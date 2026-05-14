@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createPiClaim, verifyPiClaim, bootstrapPiClaim } from '../src/pi';
 
 describe('Pi Domain Claim', () => {
@@ -49,7 +49,9 @@ describe('Pi Domain Claim', () => {
     });
 
     it('should reject missing fields', async () => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       expect(await verifyPiClaim({} as any)).toBe(false);
+      /* eslint-enable @typescript-eslint/no-explicit-any */
     });
   });
 

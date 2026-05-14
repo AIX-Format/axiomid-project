@@ -50,6 +50,7 @@ describe('POST /api/auth/connect', () => {
   });
 
   it('should create a new user if not found', async () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue(null);
     (prisma.user.create as any).mockResolvedValue({
       walletAddress: mockWalletAddress,
@@ -57,6 +58,7 @@ describe('POST /api/auth/connect', () => {
       tier: 'Ghost',
       actions: [],
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress }),
@@ -78,12 +80,14 @@ describe('POST /api/auth/connect', () => {
       actions: [],
     };
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue(existingUser);
     (calculateTier as any).mockReturnValue('Spark');
     (prisma.user.update as any).mockResolvedValue({
       ...existingUser,
       tier: 'Spark',
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress }),
@@ -98,7 +102,9 @@ describe('POST /api/auth/connect', () => {
   });
 
   it('should return 500 on internal error', async () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockRejectedValue(new Error('DB Error'));
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress }),

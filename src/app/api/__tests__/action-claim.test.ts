@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
-import { ACTIONS } from '@/lib/actions';
 
 // Mock next/server
 vi.mock('next/server', () => ({
@@ -59,7 +58,9 @@ describe('POST /api/action/claim', () => {
   });
 
   it('should return 404 if user is not found', async () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue(null);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress, actionType: 'connect_twitter' }),
@@ -73,10 +74,12 @@ describe('POST /api/action/claim', () => {
   });
 
   it('should return 400 if non-repeatable action already claimed', async () => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue({
       walletAddress: mockWalletAddress,
       actions: [{ type: 'connect_twitter' }],
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress, actionType: 'connect_twitter' }),
@@ -91,10 +94,12 @@ describe('POST /api/action/claim', () => {
 
   it('should enforce 24h cooldown for daily_pow', async () => {
     const recentDate = new Date(Date.now() - 1000).toISOString();
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue({
       walletAddress: mockWalletAddress,
       actions: [{ type: 'daily_pow', timestamp: recentDate }],
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress, actionType: 'daily_pow' }),
@@ -114,6 +119,7 @@ describe('POST /api/action/claim', () => {
       xp: 0,
       actions: [],
     };
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (prisma.user.findUnique as any).mockResolvedValue(mockUser);
     (prisma.action.create as any).mockResolvedValue({});
     (prisma.user.update as any).mockResolvedValue({
@@ -121,6 +127,7 @@ describe('POST /api/action/claim', () => {
       xp: 50,
       tier: 'Ghost',
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     const req = {
       json: async () => ({ walletAddress: mockWalletAddress, actionType: 'connect_twitter' }),
