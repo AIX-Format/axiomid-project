@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getClientIp } from "../../../lib/ip.ts";
 
 /* ============================================
    SCORE API ROUTE
@@ -59,13 +60,10 @@ export async function GET() {
 }
 
 /* POST — Validate a stamp claim */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         // Rate limit check
-        const ip =
-            request.headers.get("x-forwarded-for") ||
-            request.headers.get("x-real-ip") ||
-            "unknown";
+        const ip = getClientIp(request);
 
         if (isRateLimited(ip)) {
             return NextResponse.json(
