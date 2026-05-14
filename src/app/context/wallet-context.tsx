@@ -50,15 +50,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     try {
       // Check for Ethereum provider
-      if (typeof window !== "undefined" && (window as any).ethereum) {
+      if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const accounts = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
           if (accounts && accounts.length > 0) {
               walletAddress = accounts[0];
           } else {
               throw new Error("No accounts found");
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
            console.warn("User rejected request:", err);
            throw new Error("Connection rejected");
         }
