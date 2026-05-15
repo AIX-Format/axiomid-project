@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateTier } from '@/lib/tiers';
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ user: updatedUser, earned: actionDef.xp });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error claiming action:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

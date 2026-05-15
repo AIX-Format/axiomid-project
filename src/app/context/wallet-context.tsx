@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
@@ -52,7 +51,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Check for Ethereum provider
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" }) as string[];
           if (accounts && accounts.length > 0) {
               walletAddress = accounts[0];
           } else {
@@ -84,9 +83,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Persist locally
       localStorage.setItem("axiomid_wallet", walletAddress);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Failed to connect wallet");
+      const errorMessage = err instanceof Error ? err.message : "Failed to connect wallet";
+      setError(errorMessage);
     } finally {
       setIsConnecting(false);
     }
@@ -113,7 +113,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // The backend returns { user: updatedUser, earned: xp }
       setUser(data.user);
       return true;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Claim error:", err);
       return false;
     }
@@ -128,7 +128,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               const data = await res.json();
               setUser(data.user);
           }
-      } catch (e) {
+      } catch (e: unknown) {
           console.error(e);
       }
   }, [user]);
