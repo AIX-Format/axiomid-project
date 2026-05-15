@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "AxiomID - The Human Authorization Protocol. Decentralized identity verification for human-AI collaboration.",
+  "workspaces": [
+    "packages/*"
+  ],
   "aix": {
     "stackVersion": "0.369.0",
     "stackCodename": "Echo369",
@@ -55,7 +58,8 @@
     "next-auth": "^4.24.14",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "@axiom/pi": "^0.1.0"
+    "@axiom/pi": "*",
+    "viem": "^2.48.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
