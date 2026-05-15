@@ -29,6 +29,13 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
+/**
+ * Standard Auth Message Template
+ * (Must match backend template in src/lib/auth.ts)
+ */
+const AUTH_MESSAGE_TEMPLATE = (actionType: string, walletAddress: string, timestamp: number) =>
+  `AxiomID Action Claim\n\nAction: ${actionType}\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\nSign this message to prove you own this wallet.`;
+
 /* ============================================
    PROVIDER
    ============================================ */
@@ -41,6 +48,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Computed values
   const levelProgress = user ? getLevelProgress(user.xp, user.tier) : 0;
   const nextXP = user ? getNextLevelXP(user.tier) : null;
+
+  /**
+   * Helper to request a signature from the wallet
+   */
+  const requestSignature = async (actionType: string, walletAddress: string) => {
+    const timestamp = Date.now();
+    const message = AUTH_MESSAGE_TEMPLATE(actionType, walletAddress, timestamp);
+
+    let signature = "";
+    if (typeof window !== "undefined" && window.ethereum) {
+      try {
+        signature = await window.ethereum.request({
+          method: "personal_sign",
+          params: [message, walletAddress],
+        });
+      } catch (err: any) {
+        console.error("Signature rejection:", err);
+        throw new Error("Signature required to verify ownership.");
+      }
+    } else {
+      // Mock signature for demo/sandbox fallback
+      console.warn("No wallet found, simulating signature...");
+      signature = "0x" + "a".repeat(130); // Valid format mock signature
+    }
+
+    return { signature, timestamp };
+  };
 
   // Connect Wallet
   const connectWallet = useCallback(async () => {
@@ -65,18 +99,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else {
         // Fallback for demo/sandbox (Simulated)
         console.warn("No wallet found, simulating connection...");
-        // Generate a random wallet address or use a fixed demo one
         walletAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
       }
+
+      // Request signature for secure connect
+      const { signature, timestamp } = await requestSignature('connect_wallet', walletAddress);
 
       // Authenticate with Backend
       const res = await fetch("/api/auth/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress }),
+        body: JSON.stringify({ walletAddress, signature, timestamp }),
       });
 
-      if (!res.ok) throw new Error("Failed to authenticate");
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to authenticate");
+      }
 
       const data = await res.json();
       setUser(data.user);
@@ -95,11 +134,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Claim Action
   const claimAction = useCallback(async (actionType: string) => {
     if (!user) return false;
+    setError(null);
+
     try {
+      // Request signature for the specific action
+      const { signature, timestamp } = await requestSignature(actionType, user.walletAddress);
+
       const res = await fetch("/api/action/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: user.walletAddress, actionType }),
+        body: JSON.stringify({
+          walletAddress: user.walletAddress,
+          actionType,
+          signature,
+          timestamp
+        }),
       });
 
       if (!res.ok) {
@@ -109,12 +158,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await res.json();
-      // Update user state with new XP/Tier/Actions
-      // The backend returns { user: updatedUser, earned: xp }
       setUser(data.user);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Claim error:", err);
+      setError(err.message || "Failed to verify ownership");
       return false;
     }
   }, [user]);
@@ -134,15 +182,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   // Initial Check (Hydration)
+  // NOTE: In a production environment, we should verify the session via a token (JWT)
+  // For this progressive trust MVP, we reconnect but don't force a signature on every reload
+  // unless the backend требует it.
   useEffect(() => {
       const stored = localStorage.getItem("axiomid_wallet");
       if (stored) {
-          setIsConnecting(true);
-           fetch("/api/auth/connect", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ walletAddress: stored }),
-          })
+          setIsLoading(true);
+          // Simple check if user exists. We don't use connect route here
+          // because connect route now requires signature.
+           fetch(`/api/user/status?walletAddress=${stored}`)
           .then(res => res.json())
           .then(data => {
               if (data.user) setUser(data.user);
@@ -150,7 +199,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           .catch(err => console.error("Reconnection failed:", err))
           .finally(() => {
               setIsLoading(false);
-              setIsConnecting(false);
           });
       } else {
           setIsLoading(false);

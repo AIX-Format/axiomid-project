@@ -2,21 +2,46 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateTier } from '@/lib/tiers';
 import { ACTIONS } from '@/lib/actions';
+import { verifyWalletSignature, AUTH_MESSAGE_TEMPLATE, isValidWalletAddress } from '@/lib/auth';
+
+const SIGNATURE_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress, actionType } = await request.json();
+    const { walletAddress, actionType, signature, timestamp } = await request.json();
 
-    if (!walletAddress || !actionType) {
-      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    if (!walletAddress || !actionType || !signature || !timestamp) {
+      return NextResponse.json({ error: 'Missing parameters', details: 'walletAddress, actionType, signature, and timestamp are required' }, { status: 400 });
     }
 
+    // 1. Validate wallet address format
+    if (!isValidWalletAddress(walletAddress)) {
+      return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
+    }
+
+    // 2. Validate timestamp (anti-replay)
+    const now = Date.now();
+    const ts = Number(timestamp);
+    if (isNaN(ts) || Math.abs(now - ts) > SIGNATURE_EXPIRATION_MS) {
+      return NextResponse.json({ error: 'Signature expired or invalid timestamp' }, { status: 401 });
+    }
+
+    // 3. Verify Signature
+    const message = AUTH_MESSAGE_TEMPLATE(actionType, walletAddress, ts);
+    const isVerified = await verifyWalletSignature(walletAddress, signature, message);
+
+    if (!isVerified) {
+      return NextResponse.json({ error: 'Invalid signature', message: 'Unauthorized wallet owner' }, { status: 401 });
+    }
+
+    // 4. Validate Action Type
     const actionDef = Object.values(ACTIONS).find(a => a.id === actionType);
 
     if (!actionDef) {
       return NextResponse.json({ error: 'Invalid action type' }, { status: 400 });
     }
 
+    // 5. Find User
     const user = await prisma.user.findUnique({
       where: { walletAddress },
     });
@@ -25,7 +50,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if action already performed (unless it's repeatable like daily)
+    // 6. Check if action already performed (unless it's repeatable like daily)
     if (actionType !== 'daily_pow') {
       const existingAction = await prisma.action.findFirst({
         where: {
@@ -39,7 +64,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check daily pow cooldown
+    // 7. Check daily pow cooldown
     if (actionType === 'daily_pow') {
       const lastDaily = await prisma.action.findFirst({
         where: {
@@ -59,7 +84,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create Action
+    // 8. Create Action
     await prisma.action.create({
       data: {
         userId: user.id,
@@ -68,7 +93,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Update User XP & Tier
+    // 9. Update User XP & Tier
     const newXP = user.xp + actionDef.xp;
     const newTier = calculateTier(newXP);
 
