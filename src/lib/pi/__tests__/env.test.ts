@@ -147,4 +147,25 @@ describe("getPiEnv", () => {
     process.env.PI_API_KEY = "   ";
     expect(() => getPiEnv()).toThrow(/PI_API_KEY/);
   });
+
+  it("uses default siteUrl when NEXT_PUBLIC_SITE_URL is an empty string", () => {
+    process.env.PI_API_KEY = "key";
+    process.env.NEXT_PUBLIC_SITE_URL = "";
+    const env = getPiEnv();
+    expect(env.siteUrl).toBe("https://axiomid.app");
+  });
+
+  it("whitespace around 'true' in NEXT_PUBLIC_PI_SANDBOX is trimmed before comparison", () => {
+    process.env.PI_API_KEY = "key";
+    process.env.NEXT_PUBLIC_PI_SANDBOX = "  true  ";
+    const env = getPiEnv();
+    // The implementation trims, so "  true  ".trim() === "true" → sandbox: true
+    expect(env.sandbox).toBe(true);
+  });
+
+  it("exports both __resetPiEnvCache and __resetPiEnvCacheForTests as the same function", () => {
+    // Both names are exported — ensure the alias is consistent
+    const { __resetPiEnvCache: resetA, __resetPiEnvCacheForTests: resetB } = require("../env");
+    expect(resetA).toBe(resetB);
+  });
 });
