@@ -1,6 +1,6 @@
 {
   "name": "@axiom/pi",
   "version": "0.1.0",
-  "main": "README.md",
-  "types": "README.md"
+  "main": "index.ts",
+  "types": "index.ts"
 }

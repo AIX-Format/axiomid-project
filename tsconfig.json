@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@axiom/pi": ["./packages/axiom-pi/index.ts"]
     }
   },
   "include": [

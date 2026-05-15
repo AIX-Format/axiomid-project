@@ -59,10 +59,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     let signature = "";
     if (typeof window !== "undefined" && window.ethereum) {
       try {
-        signature = await window.ethereum.request({
+        signature = (await window.ethereum.request({
           method: "personal_sign",
           params: [message, walletAddress],
-        });
+        })) as string;
       } catch (err: any) {
         console.error("Signature rejection:", err);
         throw new Error("Signature required to verify ownership.");
@@ -86,7 +86,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Check for Ethereum provider
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = (await window.ethereum.request({ method: "eth_requestAccounts" })) as string[];
           if (accounts && accounts.length > 0) {
               walletAddress = accounts[0];
           } else {
