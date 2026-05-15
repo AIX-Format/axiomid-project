@@ -29,6 +29,18 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
+/**
+ * Generates a random Ethereum-like address for demo/sandbox purposes.
+ */
+const generateRandomAddress = () => {
+  const hex = "0123456789abcdef";
+  let address = "0x";
+  for (let i = 0; i < 40; i++) {
+    address += hex[Math.floor(Math.random() * 16)];
+  }
+  return address;
+};
+
 /* ============================================
    PROVIDER
    ============================================ */
@@ -65,8 +77,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else {
         // Fallback for demo/sandbox (Simulated)
         console.warn("No wallet found, simulating connection...");
-        // Generate a random wallet address or use a fixed demo one
-        walletAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
+        walletAddress = generateRandomAddress();
       }
 
       // Authenticate with Backend
