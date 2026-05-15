@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientIp } from "../../../lib/ip.ts";
+import { getClientIp } from "@/lib/ip";
 
 /* ============================================
    SCORE API ROUTE
