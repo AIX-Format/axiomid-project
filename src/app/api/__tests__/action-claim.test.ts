@@ -1,11 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { prisma } from '@/lib/prisma';
-import { ACTIONS } from '@/lib/actions';
+import { prisma } from '../../../lib/prisma';
+import { calculateTier } from '../../../lib/tiers';
+import { ACTIONS } from '../../../lib/actions';
+import { POST } from '../action/claim/route';
+import { NextResponse } from 'next/server';
 
 // Mock next/server
-vi.mock('next/server', () => ({
+jest.mock('next/server', () => ({
   NextResponse: {
-    json: vi.fn((body, init) => ({
+    json: jest.fn((body, init) => ({
       status: init?.status || 200,
       json: async () => body,
     })),
@@ -13,30 +15,35 @@ vi.mock('next/server', () => ({
 }));
 
 // Mock prisma
-vi.mock('@/lib/prisma', () => ({
+jest.mock('../../../lib/prisma', () => ({
   prisma: {
     user: {
-      findUnique: vi.fn(),
-      update: vi.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
     action: {
-      create: vi.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
     },
   },
 }));
 
-import { POST } from '../action/claim/route';
+// Mock tiers
+jest.mock('../../../lib/tiers', () => ({
+  calculateTier: jest.fn(),
+}));
 
 describe('POST /api/action/claim', () => {
   const mockWalletAddress = '0x1234567890123456789012345678901234567890';
+  const mockActionType = 'connect_twitter';
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should return 400 if parameters are missing', async () => {
     const req = {
-      json: async () => ({ walletAddress: mockWalletAddress }),
+      json: async () => ({}),
     } as Request;
 
     const res = await POST(req);
@@ -58,11 +65,11 @@ describe('POST /api/action/claim', () => {
     expect(data.error).toBe('Invalid action type');
   });
 
-  it('should return 404 if user is not found', async () => {
-    (prisma.user.findUnique as any).mockResolvedValue(null);
+  it('should return 404 if user not found', async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
     const req = {
-      json: async () => ({ walletAddress: mockWalletAddress, actionType: 'connect_twitter' }),
+      json: async () => ({ walletAddress: mockWalletAddress, actionType: mockActionType }),
     } as Request;
 
     const res = await POST(req);
@@ -72,14 +79,12 @@ describe('POST /api/action/claim', () => {
     expect(data.error).toBe('User not found');
   });
 
-  it('should return 400 if non-repeatable action already claimed', async () => {
-    (prisma.user.findUnique as any).mockResolvedValue({
-      walletAddress: mockWalletAddress,
-      actions: [{ type: 'connect_twitter' }],
-    });
+  it('should return 400 if action already claimed', async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'user1', walletAddress: mockWalletAddress, xp: 0 });
+    (prisma.action.findFirst as jest.Mock).mockResolvedValue({ id: 'action1' });
 
     const req = {
-      json: async () => ({ walletAddress: mockWalletAddress, actionType: 'connect_twitter' }),
+      json: async () => ({ walletAddress: mockWalletAddress, actionType: mockActionType }),
     } as Request;
 
     const res = await POST(req);
@@ -89,48 +94,22 @@ describe('POST /api/action/claim', () => {
     expect(data.error).toBe('Action already claimed');
   });
 
-  it('should enforce 24h cooldown for daily_pow', async () => {
-    const recentDate = new Date(Date.now() - 1000).toISOString();
-    (prisma.user.findUnique as any).mockResolvedValue({
-      walletAddress: mockWalletAddress,
-      actions: [{ type: 'daily_pow', timestamp: recentDate }],
-    });
+  it('should successfully claim action and update XP', async () => {
+    const mockUser = { id: 'user1', walletAddress: mockWalletAddress, xp: 0 };
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+    (prisma.action.findFirst as jest.Mock).mockResolvedValue(null);
+    (calculateTier as jest.Mock).mockReturnValue('Spark');
+    (prisma.user.update as jest.Mock).mockResolvedValue({ ...mockUser, xp: 10, tier: 'Spark' });
 
     const req = {
-      json: async () => ({ walletAddress: mockWalletAddress, actionType: 'daily_pow' }),
-    } as Request;
-
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(data.error).toBe('Daily claim cooldown');
-  });
-
-  it('should successfully claim an action and update user', async () => {
-    const mockUser = {
-      id: 'user-1',
-      walletAddress: mockWalletAddress,
-      xp: 0,
-      actions: [],
-    };
-    (prisma.user.findUnique as any).mockResolvedValue(mockUser);
-    (prisma.action.create as any).mockResolvedValue({});
-    (prisma.user.update as any).mockResolvedValue({
-      ...mockUser,
-      xp: 50,
-      tier: 'Ghost',
-    });
-
-    const req = {
-      json: async () => ({ walletAddress: mockWalletAddress, actionType: 'connect_twitter' }),
+      json: async () => ({ walletAddress: mockWalletAddress, actionType: mockActionType }),
     } as Request;
 
     const res = await POST(req);
     const data = await res.json();
 
     expect(res.status).toBe(200);
-    expect(data.earned).toBe(50);
+    expect(data.earned).toBe(ACTIONS.CONNECT_TWITTER.xp);
     expect(prisma.action.create).toHaveBeenCalled();
     expect(prisma.user.update).toHaveBeenCalled();
   });

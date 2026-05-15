@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from 'vitest';
 import { createPiClaim, verifyPiClaim, bootstrapPiClaim } from '../src/pi';
 
 describe('Pi Domain Claim', () => {

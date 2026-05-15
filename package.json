@@ -55,9 +55,8 @@
     "next-auth": "^4.24.14",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "@axiom/pi": "^0.1.0",
-    "viem": "^2.31.4",
-    "siwe": "^2.3.2"
+    "siwe": "^2.3.2",
+    "viem": "^2.31.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -74,6 +73,7 @@
     "prisma": "^6.0.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }
