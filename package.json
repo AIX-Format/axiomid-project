@@ -55,7 +55,9 @@
     "next-auth": "^4.24.14",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "@axiom/pi": "^0.1.0"
+    "@axiom/pi": "^0.1.0",
+    "viem": "^2.31.4",
+    "siwe": "^2.3.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

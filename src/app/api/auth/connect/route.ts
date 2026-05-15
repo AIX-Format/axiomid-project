@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateTier } from '@/lib/tiers';
+import { verifySignature } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress } = await request.json();
+    const { message, signature } = await request.json();
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    if (!message || !signature) {
+      return NextResponse.json({ error: 'Message and signature required' }, { status: 400 });
     }
+
+    // SIWE Verification
+    const { success, data, error } = await verifySignature(message, signature);
+
+    if (!success || !data) {
+        console.error('SIWE Verification failed:', error);
+        return NextResponse.json({ error: 'Invalid signature', details: error?.message }, { status: 401 });
+    }
+
+    const walletAddress = data.address;
 
     // Find or create user
     let user = await prisma.user.findUnique({
