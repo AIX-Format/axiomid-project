@@ -1,3 +1,132 @@
+export type ActionType =
+  | 'connect_twitter'
+  | 'connect_discord'
+  | 'verify_identity'
+  | 'daily_pow'
+  | 'wallet_age';
+
+export interface ActionDefinition {
+  id: ActionType;
+  xp: number;
+}
+
+export const ACTIONS = {
+  CONNECT_TWITTER: { id: 'connect_twitter', xp: 50 },
+  CONNECT_DISCORD: { id: 'connect_discord', xp: 50 },
+  VERIFY_IDENTITY: { id: 'verify_identity', xp: 100 }, // Simulated
+  PROOF_OF_WORK_DAILY: { id: 'daily_pow', xp: 20 },
+  WALLET_ACTIVITY: { id: 'wallet_age', xp: 300 }, // Simulated based on wallet age
+} as const satisfies Record<string, ActionDefinition>;
+
+/**
+ * Optimized list of actions for use in render loops to avoid repeated Object.values()
+ */
+export const ACTION_LIST = Object.values(ACTIONS) as ActionDefinition[];
+
+/**
+ * Optimized map for O(1) lookups by Action ID
+ */
+export const ACTION_MAP: Record<ActionType, ActionDefinition> = {
+  connect_twitter: ACTIONS.CONNECT_TWITTER,
+  connect_discord: ACTIONS.CONNECT_DISCORD,
+  verify_identity: ACTIONS.VERIFY_IDENTITY,
+  daily_pow: ACTIONS.PROOF_OF_WORK_DAILY,
+  wallet_age: ACTIONS.WALLET_ACTIVITY,
+};
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { calculateTier } from '@/lib/tiers';
+import { ACTION_MAP, ActionType } from '@/lib/actions';
+
+interface ClaimRequest {
+  walletAddress: string;
+  actionType: ActionType;
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as Partial<ClaimRequest>;
+    const { walletAddress, actionType } = body;
+
+    if (!walletAddress || !actionType) {
+      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    }
+
+    const actionDef = ACTION_MAP[actionType];
+
+    if (!actionDef) {
+      return NextResponse.json({ error: 'Invalid action type' }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { walletAddress },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if action already performed (unless it's repeatable like daily)
+    if (actionType !== 'daily_pow') {
+      const existingAction = await prisma.action.findFirst({
+        where: {
+          userId: user.id,
+          type: actionType,
+        },
+      });
+
+      if (existingAction) {
+        return NextResponse.json({ error: 'Action already claimed' }, { status: 400 });
+      }
+    }
+
+    // Check daily pow cooldown
+    if (actionType === 'daily_pow') {
+      const lastDaily = await prisma.action.findFirst({
+        where: {
+          userId: user.id,
+          type: 'daily_pow',
+        },
+        orderBy: {
+          timestamp: 'desc',
+        },
+      });
+
+      if (lastDaily) {
+        const diff = Date.now() - new Date(lastDaily.timestamp).getTime();
+        if (diff < 24 * 60 * 60 * 1000) {
+          return NextResponse.json({ error: 'Daily claim cooldown' }, { status: 400 });
+        }
+      }
+    }
+
+    // Create Action
+    await prisma.action.create({
+      data: {
+        userId: user.id,
+        type: actionType,
+        xp: actionDef.xp,
+      },
+    });
+
+    // Update User XP & Tier
+    const newXP = user.xp + actionDef.xp;
+    const newTier = calculateTier(newXP);
+
+    const updatedUser = await prisma.user.update({
+      where: { walletAddress },
+      data: {
+        xp: newXP,
+        tier: newTier,
+      },
+    });
+
+    return NextResponse.json({ user: updatedUser, earned: actionDef.xp });
+  } catch (error: unknown) {
+    console.error('Error claiming action:', error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
@@ -181,4 +310,16 @@ export function useWallet() {
     throw new Error("useWallet must be used within a WalletProvider");
   }
   return ctx;
+}
+export {};
+
+declare global {
+  interface Window {
+    webkitAudioContext: typeof AudioContext;
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+    };
+  }
 }

@@ -1,17 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateTier } from '@/lib/tiers';
-import { ACTIONS } from '@/lib/actions';
+import { ACTION_MAP, ActionType } from '@/lib/actions';
+
+interface ClaimRequest {
+  walletAddress: string;
+  actionType: ActionType;
+}
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress, actionType } = await request.json();
+    const body = (await request.json()) as Partial<ClaimRequest>;
+    const { walletAddress, actionType } = body;
 
     if (!walletAddress || !actionType) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    const actionDef = Object.values(ACTIONS).find(a => a.id === actionType);
+    const actionDef = ACTION_MAP[actionType];
 
     if (!actionDef) {
       return NextResponse.json({ error: 'Invalid action type' }, { status: 400 });
@@ -81,8 +87,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ user: updatedUser, earned: actionDef.xp });
-  } catch (error) {
-    console.error('Error claiming action:', error);
+  } catch (error: unknown) {
+    console.error('Error claiming action:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
