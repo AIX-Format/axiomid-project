@@ -20,6 +20,21 @@ model User {
   actions       Action[]
   vaults        Vault[]
   integrations  Integration[]
+  agent         UserAgent?
+}
+
+model UserAgent {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id])
+  publicId    String    @unique @default(cuid()) // ag_xxx — used across products
+  name        String    @default("My Agent")
+  status      String    @default("inactive") // inactive | active | paused
+  apiKeyHash  String?
+  permissions String?   // JSON — e.g. ["claim", "vault", "verify"]
+  lastActive  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Action {

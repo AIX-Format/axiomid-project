@@ -9,6 +9,12 @@ export interface User {
   xp: number;
   tier: Tier;
   actions: { type: string; xp: number; timestamp: string }[];
+  agent?: {
+    id: string;
+    name: string;
+    status: string;
+    lastActive: string | null;
+  } | null;
 }
 
 interface WalletContextType {
@@ -20,6 +26,8 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   claimAction: (actionType: string) => Promise<boolean>;
   refreshUser: () => Promise<void>;
+  createAgent: (name?: string) => Promise<boolean>;
+  activateAgent: () => Promise<boolean>;
   levelProgress: number;
   nextXP: number | null;
 }
@@ -122,6 +130,38 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const createAgent = useCallback(async (name?: string) => {
+    if (!user) return false;
+    try {
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: user.walletAddress, name }),
+      });
+      if (!res.ok) return false;
+      await refreshUser();
+      return true;
+    } catch {
+      return false;
+    }
+  }, [user, refreshUser]);
+
+  const activateAgent = useCallback(async () => {
+    if (!user) return false;
+    try {
+      const res = await fetch("/api/agent/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: user.walletAddress }),
+      });
+      if (!res.ok) return false;
+      await refreshUser();
+      return true;
+    } catch {
+      return false;
+    }
+  }, [user, refreshUser]);
+
   useEffect(() => {
     const stored = localStorage.getItem("axiomid_wallet");
     if (stored) {
@@ -156,6 +196,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connectWallet,
         claimAction,
         refreshUser,
+        createAgent,
+        activateAgent,
         levelProgress,
         nextXP,
       }}

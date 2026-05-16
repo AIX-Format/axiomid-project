@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     let user = await prisma.user.findUnique({
       where: { walletAddress },
-      include: { actions: true },
+      include: { actions: true, agent: true },
     });
 
     if (!user) {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
           xp: 0,
           tier: 'Ghost',
         },
-        include: { actions: true },
+        include: { actions: true, agent: true },
       });
     } else {
       const currentTier = calculateTier(user.xp);
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         user = await prisma.user.update({
           where: { walletAddress },
           data: { tier: currentTier },
-          include: { actions: true },
+          include: { actions: true, agent: true },
         });
       }
     }
