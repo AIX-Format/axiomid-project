@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { Tier, getLevelProgress, getNextLevelXP } from "@/lib/tiers";
+import { ensurePiSdk } from "@/lib/pi-sdk";
 
 export interface User {
   id: string;
@@ -46,9 +47,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const levelProgress = user ? getLevelProgress(user.xp, user.tier) : 0;
   const nextXP = user ? getNextLevelXP(user.tier) : null;
 
-  useEffect(() => {
-    setIsPiBrowser(typeof window !== "undefined" && !!window.Pi);
-  }, []);
+  const authAttempted = useRef(false);
 
   const connectWallet = useCallback(async () => {
     setIsConnecting(true);
@@ -60,10 +59,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       let piUsername = "";
       let accessToken = "";
 
-      if (typeof window !== "undefined" && window.Pi) {
-        await window.Pi.init({ version: "2.0", sandbox: SANDBOX });
+      const pi = typeof window !== "undefined" ? window.Pi : null;
 
-        const auth = await window.Pi.authenticate(
+      if (pi) {
+        await pi.init({ version: "2.0", sandbox: SANDBOX });
+
+        const auth = await pi.authenticate(
           ["username"],
           (payment) => {
             console.warn("Incomplete payment:", payment);
@@ -104,26 +105,45 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.Pi) {
-      connectWallet();
-    } else {
-      const stored = localStorage.getItem("axiomid_wallet");
-      if (stored) {
-        fetch("/api/auth/connect", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ walletAddress: stored }),
+    if (authAttempted.current) return;
+    authAttempted.current = true;
+
+    let settled = false;
+
+    ensurePiSdk()
+      .then(() => {
+        if (window.Pi) {
+          setIsPiBrowser(true);
+          connectWallet();
+        }
+        return undefined;
+      })
+      .catch(() => {})
+      .finally(() => {
+        settled = true;
+      });
+
+    const stored = localStorage.getItem("axiomid_wallet");
+    if (stored && !stored.startsWith("demo:")) {
+      fetch("/api/auth/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: stored }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) setUser(data.user);
         })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.user) setUser(data.user);
-          })
-          .catch((err) => console.error("Reconnection failed:", err))
-          .finally(() => setIsLoading(false));
-      } else {
+        .catch(() => {});
+    }
+
+    const timer = setTimeout(() => {
+      if (!settled) {
         setIsLoading(false);
       }
-    }
+    }, 5000);
+
+    return () => clearTimeout(timer);
   }, [connectWallet]);
 
   const claimAction = useCallback(async (actionType: string) => {

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { WalletProvider } from "./context/wallet-context";
 
@@ -37,6 +36,12 @@ export const metadata: Metadata = {
   authors: [{ name: "Mohamed Abdelaziz", url: "https://github.com/Moeabdelaziz007" }],
   creator: "Mohamed Abdelaziz",
   publisher: "AxiomID",
+  icons: {
+    apple: [
+      { url: '/icon-192x192.png', sizes: '192x192' },
+      { url: '/icon-512x512.png', sizes: '512x512' },
+    ],
+  },
   formatDetection: {
     email: false,
     address: false,
@@ -99,11 +104,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <head>
-        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512x512.png" />
-        <script src="https://sdk.minepi.com/pi-sdk.js" />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black text-white min-h-screen overflow-x-hidden`}
       >
