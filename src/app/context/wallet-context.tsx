@@ -173,9 +173,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (detectPiBrowser()) {
       connectWallet();
     } else if (typeof window !== "undefined" && window.Pi) {
-      debug("Pi SDK injected by sandbox — auto-initializing");
-      Pi.init({ version: "2.0", sandbox: SANDBOX }).catch((e: Error) => {
-        debug("Pi.init auto failed", e.message);
+      console.log("[AUTH DEBUG] Pi SDK injected by sandbox — auto-initializing");
+      window.Pi!.init({ version: "2.0", sandbox: SANDBOX }).catch((e: Error) => {
+        console.log("[AUTH DEBUG] Pi.init auto failed", e.message);
       });
     } else {
       const stored = localStorage.getItem("axiomid_wallet");
