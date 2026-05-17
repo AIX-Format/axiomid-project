@@ -35,7 +35,16 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
-const SANDBOX = process.env.NEXT_PUBLIC_PI_SANDBOX === "true";
+function getSandboxFlag(): boolean {
+  if (process.env.NEXT_PUBLIC_PI_SANDBOX === "true") return true;
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sandbox") === "true") return true;
+  }
+  return false;
+}
+
+const SANDBOX = getSandboxFlag();
 const AUTH_TIMEOUT_MS = 15000;
 
 function detectPiBrowser(): boolean {
@@ -66,6 +75,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setIsPiBrowser(detectPiBrowser());
+    console.log("[AUTH DEBUG] SANDBOX flag:", SANDBOX, "| env:", process.env.NEXT_PUBLIC_PI_SANDBOX, "| url:", window.location.search.includes("sandbox=true"));
   }, []);
 
   useEffect(() => {
