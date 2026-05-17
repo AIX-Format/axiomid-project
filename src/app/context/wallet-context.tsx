@@ -118,7 +118,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         debug("calling Pi.authenticate...");
         const auth = await withTimeout(
-          window.Pi.authenticate(
+          window.Pi!.authenticate(
             ["username"],
             (payment) => {
               console.warn("Incomplete payment:", payment);
