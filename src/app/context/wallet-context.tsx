@@ -41,11 +41,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPiBrowser, setIsPiBrowser] = useState(false);
 
   const levelProgress = user ? getLevelProgress(user.xp, user.tier) : 0;
   const nextXP = user ? getNextLevelXP(user.tier) : null;
-
-  const [isPiBrowser, setIsPiBrowser] = useState(false);
 
   useEffect(() => {
     setIsPiBrowser(typeof window !== "undefined" && !!window.Pi);
@@ -59,14 +58,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       let walletAddress = "";
       let piUid = "";
       let piUsername = "";
+      let accessToken = "";
 
-      if (isPiBrowser && window.Pi) {
-        window.Pi.init({ version: "2.0", sandbox: SANDBOX });
-        const auth = await window.Pi.authenticate(["username", "payments"], (payment) => {
-          console.warn("Incomplete payment:", payment);
-        });
+      if (typeof window !== "undefined" && window.Pi) {
+        await window.Pi.init({ version: "2.0", sandbox: SANDBOX });
+
+        const auth = await window.Pi.authenticate(
+          ["username"],
+          (payment) => {
+            console.warn("Incomplete payment:", payment);
+          }
+        );
+
         piUid = auth.user.uid;
         piUsername = auth.user.username;
+        accessToken = auth.accessToken;
         walletAddress = `pi:${piUid}`;
       } else {
         walletAddress = `demo:${crypto.randomUUID().slice(0, 8)}`;
@@ -77,10 +83,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/auth/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress, piUid, piUsername }),
+        body: JSON.stringify({ walletAddress, piUid, piUsername, accessToken }),
       });
 
-      if (!res.ok) throw new Error("Authentication failed");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Authentication failed");
+      }
 
       const data = await res.json();
       setUser(data.user);
@@ -90,8 +99,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setError(message);
     } finally {
       setIsConnecting(false);
+      setIsLoading(false);
     }
-  }, [isPiBrowser]);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.Pi) {
+      connectWallet();
+    } else {
+      const stored = localStorage.getItem("axiomid_wallet");
+      if (stored) {
+        fetch("/api/auth/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletAddress: stored }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.user) setUser(data.user);
+          })
+          .catch((err) => console.error("Reconnection failed:", err))
+          .finally(() => setIsLoading(false));
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, [connectWallet]);
 
   const claimAction = useCallback(async (actionType: string) => {
     if (!user) return false;
@@ -161,29 +194,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [user, refreshUser]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("axiomid_wallet");
-    if (stored) {
-      setIsConnecting(true);
-      fetch("/api/auth/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: stored }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.user) setUser(data.user);
-        })
-        .catch((err) => console.error("Reconnection failed:", err))
-        .finally(() => {
-          setIsLoading(false);
-          setIsConnecting(false);
-        });
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
 
   return (
     <WalletContext.Provider

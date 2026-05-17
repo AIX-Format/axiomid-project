@@ -32,8 +32,13 @@ interface PiPaymentCallbacks {
   onError: (error: Error, payment?: PiPaymentDTO) => void;
 }
 
+interface PiInitOptions {
+  version: string;
+  sandbox?: boolean;
+}
+
 interface PiInstance {
-  init: (params: { version: string; sandbox?: boolean }) => void;
+  init: (params: PiInitOptions) => Promise<void>;
   authenticate: (
     scopes: string[],
     onIncompletePayment: (payment: PiPaymentDTO) => void
@@ -46,6 +51,11 @@ interface PiInstance {
     },
     callbacks: PiPaymentCallbacks
   ) => Promise<PiPaymentDTO>;
+}
+
+interface PiMeResponse {
+  uid: string;
+  username: string;
 }
 
 declare global {
