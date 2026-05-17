@@ -125,26 +125,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       );
       debug("Pi.init done");
 
-        debug("calling Pi.authenticate...");
-        const auth = await withTimeout(
-          piSdk.authenticate(
-            ["username"],
-            (payment) => {
-              console.warn("Incomplete payment:", payment);
-            }
-          ),
-          AUTH_TIMEOUT_MS
-        );
-        debug("Pi.authenticate done", { uid: auth.user.uid, username: auth.user.username });
+      debug("calling Pi.authenticate...");
+      const auth = await withTimeout(
+        piSdk.authenticate(
+          ["username"],
+          (payment) => {
+            console.warn("Incomplete payment:", payment);
+          }
+        ),
+        AUTH_TIMEOUT_MS
+      );
+      debug("Pi.authenticate done", { uid: auth.user.uid, username: auth.user.username });
 
-        piUid = auth.user.uid;
-        piUsername = auth.user.username;
-        accessToken = auth.accessToken;
-        walletAddress = `pi:${piUid}`;
-      } else {
-        debug("not Pi Browser, using demo wallet");
-        walletAddress = `demo:${crypto.randomUUID().slice(0, 8)}`;
-      }
+      piUid = auth.user.uid;
+      piUsername = auth.user.username;
+      accessToken = auth.accessToken;
+      walletAddress = `pi:${piUid}`;
+    } else {
+      debug("not Pi Browser, using demo wallet");
+      walletAddress = `demo:${crypto.randomUUID().slice(0, 8)}`;
+    }
 
       debug("saving wallet to localStorage", walletAddress);
       localStorage.setItem("axiomid_wallet", walletAddress);
