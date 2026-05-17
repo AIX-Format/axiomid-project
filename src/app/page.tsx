@@ -162,7 +162,9 @@ export default function Home() {
       <div className="scanline" />
 
       {/* Sandbox Banner */}
-      {process.env.NEXT_PUBLIC_PI_SANDBOX === "true" && (
+      {(process.env.NEXT_PUBLIC_PI_SANDBOX === "true" ||
+        (typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).get("sandbox") === "true")) && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-mono tracking-wider">
           SANDBOX MODE
         </div>
