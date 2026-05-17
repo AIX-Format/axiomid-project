@@ -111,7 +111,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         debug("calling Pi.init...");
         await withTimeout(
-          window.Pi.init({ version: "2.0", sandbox: SANDBOX }),
+          window.Pi!.init({ version: "2.0", sandbox: SANDBOX }),
           AUTH_TIMEOUT_MS
         );
         debug("Pi.init done");
