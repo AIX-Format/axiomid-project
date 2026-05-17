@@ -37,6 +37,11 @@ const WalletContext = createContext<WalletContextType | null>(null);
 
 const SANDBOX = process.env.NEXT_PUBLIC_PI_SANDBOX === "true";
 
+function detectPiBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Pi Browser|minepi/i.test(navigator.userAgent);
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -49,6 +54,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const authAttempted = useRef(false);
 
+  useEffect(() => {
+    setIsPiBrowser(detectPiBrowser());
+  }, []);
+
   const connectWallet = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
@@ -59,12 +68,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       let piUsername = "";
       let accessToken = "";
 
-      const pi = typeof window !== "undefined" ? window.Pi : null;
+      if (detectPiBrowser()) {
+        await ensurePiSdk();
+        if (!window.Pi) throw new Error("Pi SDK not available");
 
-      if (pi) {
-        await pi.init({ version: "2.0", sandbox: SANDBOX });
+        await window.Pi.init({ version: "2.0", sandbox: SANDBOX });
 
-        const auth = await pi.authenticate(
+        const auth = await window.Pi.authenticate(
           ["username"],
           (payment) => {
             console.warn("Incomplete payment:", payment);
@@ -108,42 +118,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (authAttempted.current) return;
     authAttempted.current = true;
 
-    let settled = false;
-
-    ensurePiSdk()
-      .then(() => {
-        if (window.Pi) {
-          setIsPiBrowser(true);
-          connectWallet();
-        }
-        return undefined;
-      })
-      .catch(() => {})
-      .finally(() => {
-        settled = true;
-      });
-
-    const stored = localStorage.getItem("axiomid_wallet");
-    if (stored && !stored.startsWith("demo:")) {
-      fetch("/api/auth/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: stored }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.user) setUser(data.user);
+    if (detectPiBrowser()) {
+      connectWallet();
+    } else {
+      const stored = localStorage.getItem("axiomid_wallet");
+      if (stored) {
+        fetch("/api/auth/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletAddress: stored }),
         })
-        .catch(() => {});
-    }
-
-    const timer = setTimeout(() => {
-      if (!settled) {
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.user) setUser(data.user);
+          })
+          .catch(() => {})
+          .finally(() => setIsLoading(false));
+      } else {
         setIsLoading(false);
       }
-    }, 5000);
-
-    return () => clearTimeout(timer);
+    }
   }, [connectWallet]);
 
   const claimAction = useCallback(async (actionType: string) => {
