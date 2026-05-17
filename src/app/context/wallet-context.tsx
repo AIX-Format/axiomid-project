@@ -36,10 +36,20 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | null>(null);
 
 const SANDBOX = process.env.NEXT_PUBLIC_PI_SANDBOX === "true";
+const AUTH_TIMEOUT_MS = 15000;
 
 function detectPiBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Pi Browser|minepi/i.test(navigator.userAgent);
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+    ),
+  ]);
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
@@ -58,9 +68,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setIsPiBrowser(detectPiBrowser());
   }, []);
 
+  useEffect(() => {
+    setIsLoading(false);
+  }, []);
+
   const connectWallet = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
+
+    const debug = (label: string, data?: unknown) => {
+      console.log(`[AUTH DEBUG] ${label}`, data ?? "");
+    };
 
     try {
       let walletAddress = "";
@@ -68,29 +86,47 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       let piUsername = "";
       let accessToken = "";
 
-      if (detectPiBrowser()) {
-        await ensurePiSdk();
+      const inPiBrowser = detectPiBrowser();
+      debug("detectPiBrowser", inPiBrowser);
+
+      if (inPiBrowser) {
+        debug("ensuring Pi SDK...");
+        await withTimeout(ensurePiSdk(), AUTH_TIMEOUT_MS);
+        debug("Pi SDK available", !!window.Pi);
         if (!window.Pi) throw new Error("Pi SDK not available");
 
-        await window.Pi.init({ version: "2.0", sandbox: SANDBOX });
-
-        const auth = await window.Pi.authenticate(
-          ["username"],
-          (payment) => {
-            console.warn("Incomplete payment:", payment);
-          }
+        debug("calling Pi.init...");
+        await withTimeout(
+          window.Pi.init({ version: "2.0", sandbox: SANDBOX }),
+          AUTH_TIMEOUT_MS
         );
+        debug("Pi.init done");
+
+        debug("calling Pi.authenticate...");
+        const auth = await withTimeout(
+          window.Pi.authenticate(
+            ["username"],
+            (payment) => {
+              console.warn("Incomplete payment:", payment);
+            }
+          ),
+          AUTH_TIMEOUT_MS
+        );
+        debug("Pi.authenticate done", { uid: auth.user.uid, username: auth.user.username });
 
         piUid = auth.user.uid;
         piUsername = auth.user.username;
         accessToken = auth.accessToken;
         walletAddress = `pi:${piUid}`;
       } else {
+        debug("not Pi Browser, using demo wallet");
         walletAddress = `demo:${crypto.randomUUID().slice(0, 8)}`;
       }
 
+      debug("saving wallet to localStorage", walletAddress);
       localStorage.setItem("axiomid_wallet", walletAddress);
 
+      debug("POST /api/auth/connect", { walletAddress, hasAccessToken: !!accessToken });
       const res = await fetch("/api/auth/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,18 +135,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       if (!res.ok) {
         const err = await res.json();
+        debug("auth/connect failed", err);
         throw new Error(err.error || "Authentication failed");
       }
 
       const data = await res.json();
+      debug("auth/connect success", data.user);
       setUser(data.user);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Connection failed";
+      debug("connectWallet error", message);
       console.error(err);
       setError(message);
     } finally {
       setIsConnecting(false);
-      setIsLoading(false);
     }
   }, []);
 
@@ -132,10 +170,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           .then((data) => {
             if (data.user) setUser(data.user);
           })
-          .catch(() => {})
-          .finally(() => setIsLoading(false));
-      } else {
-        setIsLoading(false);
+          .catch(() => {});
       }
     }
   }, [connectWallet]);
