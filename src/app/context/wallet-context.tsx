@@ -184,7 +184,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (authAttempted.current) return;
     authAttempted.current = true;
 
-    const initSandboxPi = (pi: PiInstance) => {
+    const initSandboxPi = (pi: NonNullable<typeof window.Pi>) => {
       console.log("[AUTH DEBUG] Pi SDK detected, calling Pi.init...");
       pi.init({ version: "2.0", sandbox: SANDBOX }).catch((e: Error) => {
         console.log("[AUTH DEBUG] Pi.init auto failed", e.message);
