@@ -101,50 +101,55 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       debug("detectPiBrowser", inPiBrowser);
       debug("hasPiSdk", !!piSdk);
 
-      if (inPiBrowser) {
-        debug("ensuring Pi SDK...");
-        await withTimeout(ensurePiSdk(), AUTH_TIMEOUT_MS);
-        piSdk = typeof window !== "undefined" ? window.Pi : undefined;
-        debug("Pi SDK available", !!piSdk);
-        if (!piSdk) throw new Error("Pi SDK not available");
-      } else if (!piSdk) {
+      let usePiSdk = inPiBrowser || !!piSdk;
+      if (!usePiSdk) {
         debug("waiting for sandbox Pi SDK injection...");
         for (let i = 0; i < 30; i++) {
           await new Promise((r) => setTimeout(r, 300));
           piSdk = typeof window !== "undefined" ? window.Pi : undefined;
-          if (piSdk) break;
+          if (piSdk) { usePiSdk = true; break; }
         }
-        debug("sandbox Pi SDK resolved", !!piSdk);
-        if (!piSdk) throw new Error("Pi SDK not injected by sandbox");
+        debug("sandbox Pi SDK resolved", usePiSdk);
       }
 
-      debug("calling Pi.init...");
-      await withTimeout(
-        piSdk.init({ version: "2.0", sandbox: SANDBOX }),
-        AUTH_TIMEOUT_MS
-      );
-      debug("Pi.init done");
+      debug("usePiSdk", usePiSdk);
 
-      debug("calling Pi.authenticate...");
-      const auth = await withTimeout(
-        piSdk.authenticate(
-          ["username"],
-          (payment) => {
-            console.warn("Incomplete payment:", payment);
-          }
-        ),
-        AUTH_TIMEOUT_MS
-      );
-      debug("Pi.authenticate done", { uid: auth.user.uid, username: auth.user.username });
+      if (usePiSdk) {
+        if (inPiBrowser) {
+          debug("ensuring Pi SDK...");
+          await withTimeout(ensurePiSdk(), AUTH_TIMEOUT_MS);
+          piSdk = typeof window !== "undefined" ? window.Pi : undefined;
+          debug("Pi SDK available", !!piSdk);
+          if (!piSdk) throw new Error("Pi SDK not available");
+        }
 
-      piUid = auth.user.uid;
-      piUsername = auth.user.username;
-      accessToken = auth.accessToken;
-      walletAddress = `pi:${piUid}`;
-    } else {
-      debug("not Pi Browser, using demo wallet");
-      walletAddress = `demo:${crypto.randomUUID().slice(0, 8)}`;
-    }
+        debug("calling Pi.init...");
+        await withTimeout(
+          piSdk!.init({ version: "2.0", sandbox: SANDBOX }),
+          AUTH_TIMEOUT_MS
+        );
+        debug("Pi.init done");
+
+        debug("calling Pi.authenticate...");
+        const auth = await withTimeout(
+          piSdk!.authenticate(
+            ["username"],
+            (payment) => {
+              console.warn("Incomplete payment:", payment);
+            }
+          ),
+          AUTH_TIMEOUT_MS
+        );
+        debug("Pi.authenticate done", { uid: auth.user.uid, username: auth.user.username });
+
+        piUid = auth.user.uid;
+        piUsername = auth.user.username;
+        accessToken = auth.accessToken;
+        walletAddress = `pi:${piUid}`;
+      } else {
+        debug("not Pi Browser, using demo wallet");
+        walletAddress = `demo:${crypto.randomUUID().slice(0, 8)}`;
+      }
 
       debug("saving wallet to localStorage", walletAddress);
       localStorage.setItem("axiomid_wallet", walletAddress);
